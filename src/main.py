@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from generator import generate_scenario
 
 # Set appearance
 ctk.set_appearance_mode("dark")
@@ -24,4 +25,13 @@ subtitle = ctk.CTkLabel(
 )
 subtitle.pack()
 
+incident = generate_scenario("brute_force")
+
+print(f"\nScenario: {incident['name']}")
+print(f"Severity: {incident['severity']}")
+print("\nLogs:\n")
+
+for log in incident["logs"]:
+    print(log)
+    
 app.mainloop()
