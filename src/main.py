@@ -3,22 +3,22 @@ import customtkinter as ctk
 from generator import generate_random_scenario
 from analyzer import analyze_logs
 
-# -------------------------
-# Window
-# -------------------------
+# -------------------------------------------------
+# App Configuration
+# -------------------------------------------------
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 app = ctk.CTk()
 app.title("🛡 SentLens")
-app.geometry("900x650")
+app.geometry("1100x700")
 
 current_incident = None
 
-# -------------------------
+# -------------------------------------------------
 # Functions
-# -------------------------
+# -------------------------------------------------
 
 def generate_incident():
     global current_incident
@@ -33,8 +33,8 @@ def generate_incident():
 
     log_box.configure(state="disabled")
 
-    analysis_label.configure(
-        text="Incident generated.\nClick Analyze."
+    status_label.configure(
+        text="Incident Ready\n\nClick Analyze."
     )
 
 
@@ -42,7 +42,7 @@ def analyze_incident():
     global current_incident
 
     if current_incident is None:
-        analysis_label.configure(
+        status_label.configure(
             text="Generate an incident first."
         )
         return
@@ -54,22 +54,25 @@ def analyze_incident():
     for reason in result["reason"]:
         evidence += f"• {reason}\n"
 
-    analysis_label.configure(
-        text=(
-            f"Attack: {result['attack']}\n"
-            f"Confidence: {result['confidence']}%\n\n"
-            f"Evidence:\n{evidence}"
-        )
+    report = (
+        "Investigation Summary\n\n"
+        f"Attack:\n{result['attack']}\n\n"
+        f"Confidence:\n{result['confidence']}%\n\n"
+        f"Severity:\n{current_incident['severity']}\n\n"
+        "Evidence:\n"
+        f"{evidence}"
     )
 
-# -------------------------
-# Title
-# -------------------------
+    status_label.configure(text=report)
+
+# -------------------------------------------------
+# Header
+# -------------------------------------------------
 
 title = ctk.CTkLabel(
     app,
     text="🛡 SentLens",
-    font=("Segoe UI", 28, "bold")
+    font=("Segoe UI", 30, "bold")
 )
 
 title.pack(pady=(20, 5))
@@ -82,9 +85,9 @@ subtitle = ctk.CTkLabel(
 
 subtitle.pack(pady=(0, 20))
 
-# -------------------------
+# -------------------------------------------------
 # Buttons
-# -------------------------
+# -------------------------------------------------
 
 button_frame = ctk.CTkFrame(app)
 
@@ -93,6 +96,7 @@ button_frame.pack(pady=10)
 generate_button = ctk.CTkButton(
     button_frame,
     text="Generate Incident",
+    width=180,
     command=generate_incident
 )
 
@@ -101,55 +105,100 @@ generate_button.pack(side="left", padx=10)
 analyze_button = ctk.CTkButton(
     button_frame,
     text="Analyze",
+    width=180,
     command=analyze_incident
 )
 
 analyze_button.pack(side="left", padx=10)
 
-# -------------------------
-# Logs
-# -------------------------
+# -------------------------------------------------
+# Main Area
+# -------------------------------------------------
+
+main_frame = ctk.CTkFrame(app)
+
+main_frame.pack(
+    fill="both",
+    expand=True,
+    padx=20,
+    pady=20
+)
+
+main_frame.grid_columnconfigure(0, weight=1)
+main_frame.grid_columnconfigure(1, weight=1)
+
+# -------------------------------------------------
+# LEFT PANEL
+# -------------------------------------------------
+
+logs_frame = ctk.CTkFrame(main_frame)
+
+logs_frame.grid(
+    row=0,
+    column=0,
+    sticky="nsew",
+    padx=(0,10)
+)
 
 logs_title = ctk.CTkLabel(
-    app,
+    logs_frame,
     text="Logs",
-    font=("Segoe UI", 18, "bold")
+    font=("Segoe UI", 22, "bold")
 )
 
-logs_title.pack(pady=(20, 5))
+logs_title.pack(pady=15)
 
 log_box = ctk.CTkTextbox(
-    app,
-    width=800,
-    height=250
+    logs_frame,
+    width=450,
+    height=450,
+    font=("Consolas",13)
 )
 
-log_box.pack()
+log_box.pack(
+    padx=15,
+    pady=(0,15),
+    fill="both",
+    expand=True
+)
 
 log_box.configure(state="disabled")
 
-# -------------------------
-# Analysis
-# -------------------------
+# -------------------------------------------------
+# RIGHT PANEL
+# -------------------------------------------------
+
+analysis_frame = ctk.CTkFrame(main_frame)
+
+analysis_frame.grid(
+    row=0,
+    column=1,
+    sticky="nsew",
+    padx=(10,0)
+)
 
 analysis_title = ctk.CTkLabel(
-    app,
-    text="Analysis",
-    font=("Segoe UI", 18, "bold")
+    analysis_frame,
+    text="Investigation",
+    font=("Segoe UI",22,"bold")
 )
 
-analysis_title.pack(pady=(20, 5))
+analysis_title.pack(pady=15)
 
-analysis_label = ctk.CTkLabel(
-    app,
+status_label = ctk.CTkLabel(
+    analysis_frame,
     text="Waiting for incident...",
     justify="left",
-    anchor="w",
-    font=("Consolas", 14)
+    anchor="nw",
+    font=("Consolas",14)
 )
 
-analysis_label.pack(fill="x", padx=50)
+status_label.pack(
+    padx=20,
+    pady=10,
+    anchor="nw"
+)
 
-# -------------------------
+# -------------------------------------------------
 
 app.mainloop()
