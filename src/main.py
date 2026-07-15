@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from generator import generate_scenario
+from analyzer import analyze_logs
 
 # Set appearance
 ctk.set_appearance_mode("dark")
@@ -25,13 +26,27 @@ subtitle = ctk.CTkLabel(
 )
 subtitle.pack()
 
-incident = generate_scenario("brute_force")
+incident = generate_scenario("insider_threat")  # Change the scenario name to test different scenarios
+result = analyze_logs(incident["logs"])
 
 print(f"\nScenario: {incident['name']}")
 print(f"Severity: {incident['severity']}")
+
 print("\nLogs:\n")
+print("-----")
 
 for log in incident["logs"]:
     print(log)
-    
+
+print("\nAnalysis Result")
+print("----------------")
+print(f"Attack: {result['attack']}")
+print(f"Confidence: {result['confidence']}%")
+
+print("\nEvidence:")
+
+for reason in result["reason"]:
+    print(f"- {reason}")
+
+
 app.mainloop()
