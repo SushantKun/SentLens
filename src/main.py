@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from generator import generate_scenario
+from generator import generate_random_scenario
 from analyzer import analyze_logs
 
 # Set appearance
@@ -8,7 +8,7 @@ ctk.set_default_color_theme("blue")
 
 # Create the main window
 app = ctk.CTk()
-app.title("SentLens")
+app.title("🛡️ SentLens")
 app.geometry("900x600")
 
 # Welcome title
@@ -26,13 +26,17 @@ subtitle = ctk.CTkLabel(
 )
 subtitle.pack()
 
-incident = generate_scenario("insider_threat")  # Change the scenario name to test different scenarios
+# Generate a random incident
+incident = generate_random_scenario()
+
+# Analyze the logs
 result = analyze_logs(incident["logs"])
 
+# Display incident in terminal
 print(f"\nScenario: {incident['name']}")
 print(f"Severity: {incident['severity']}")
 
-print("\nLogs:\n")
+print("\nLogs:")
 print("-----")
 
 for log in incident["logs"]:
@@ -47,6 +51,5 @@ print("\nEvidence:")
 
 for reason in result["reason"]:
     print(f"- {reason}")
-
 
 app.mainloop()

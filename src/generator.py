@@ -1,6 +1,9 @@
+import random
+
+
 def generate_scenario(scenario_name):
     """
-    Generates a simulated cyber incident scenario.
+    Returns a predefined cyber incident.
     """
 
     scenarios = {
@@ -57,3 +60,20 @@ def generate_scenario(scenario_name):
     }
 
     return scenarios.get(scenario_name)
+
+
+def generate_random_scenario():
+    """
+    Returns one random cyber incident.
+    """
+
+    available_scenarios = [
+        "brute_force",
+        "port_scan",
+        "phishing",
+        "insider_threat"
+    ]
+
+    selected_scenario = random.choice(available_scenarios)
+
+    return generate_scenario(selected_scenario)
