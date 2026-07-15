@@ -1,122 +1,124 @@
-def analyze_logs(logs):
+from models import Incident
+
+
+def analyze_logs(incident: Incident):
     """
-    Analyze log entries and identify the most likely attack.
+    Analyze an incident and return investigation results.
     """
 
-    # -------------------------
-    # Indicators
-    # -------------------------
+    logs = incident.logs
 
-    failed_logins = 0
-    successful_login = False
-    admin_created = False
+    attack = "Unknown"
+    confidence = 0
+    evidence = []
 
-    syn_packets = 0
-
-    clicked_link = False
-    credentials_submitted = False
-    unknown_login = False
-
-    database_access = False
-    usb_connected = False
-    file_copy = False
+    log_text = " ".join(logs).lower()
 
     # -------------------------
-    # Collect Evidence
+    # Brute Force Detection
     # -------------------------
 
-    for log in logs:
+    failed_logins = log_text.count("login failed")
 
-        # Brute Force
-        if "LOGIN FAILED" in log:
-            failed_logins += 1
+    if failed_logins >= 5:
+        attack = "Brute Force Attack"
+        confidence = 95
 
-        if "LOGIN SUCCESS" in log:
-            successful_login = True
+        evidence.append(
+            f"{failed_logins} failed login attempts detected"
+        )
 
-        if "NEW ADMIN ACCOUNT CREATED" in log:
-            admin_created = True
+        if "login success" in log_text:
+            evidence.append(
+                "Successful login after repeated failures"
+            )
 
-        # Port Scan
-        if "TCP SYN" in log:
-            syn_packets += 1
+        if "admin account created" in log_text:
+            evidence.append(
+                "Administrator account creation detected"
+            )
 
-        # Phishing
-        if "clicked suspicious link" in log:
-            clicked_link = True
-
-        if "Credentials submitted" in log:
-            credentials_submitted = True
-
-        if "unknown IP" in log:
-            unknown_login = True
-
-        # Insider Threat
-        if "HR database" in log:
-            database_access = True
-
-        if "USB device connected" in log:
-            usb_connected = True
-
-        if "Large file copied" in log:
-            file_copy = True
 
     # -------------------------
-    # Detection Rules
+    # Port Scan Detection
     # -------------------------
 
-    # Brute Force
-    if failed_logins >= 5 and successful_login:
-        return {
-            "attack": "Brute Force Attack",
-            "confidence": 95,
-            "reason": [
-                f"{failed_logins} failed login attempts",
-                "Successful login detected",
-                "Administrator account created"
-            ]
-        }
+    elif "tcp syn" in log_text:
 
-    # Port Scan
-    if syn_packets >= 5:
-        return {
-            "attack": "Port Scan",
-            "confidence": 90,
-            "reason": [
-                f"{syn_packets} TCP SYN packets detected",
-                "Multiple ports probed in quick succession"
-            ]
-        }
+        ports = log_text.count("tcp syn")
 
-    # Phishing
-    if clicked_link and credentials_submitted and unknown_login:
-        return {
-            "attack": "Phishing Attack",
-            "confidence": 92,
-            "reason": [
-                "Suspicious email link clicked",
-                "Credentials submitted",
-                "Unknown login detected"
-            ]
-        }
+        if ports >= 5:
+            attack = "Port Scan"
+            confidence = 90
 
-    # Insider Threat
-    if database_access and usb_connected and file_copy:
-        return {
-            "attack": "Insider Threat",
-            "confidence": 94,
-            "reason": [
-                "Sensitive database accessed",
-                "USB device connected",
-                "Large file copied"
-            ]
-        }
+            evidence.append(
+                f"{ports} TCP SYN requests detected"
+            )
 
-    # Unknown
+            evidence.append(
+                "Multiple ports probed in short succession"
+            )
+
+
+    # -------------------------
+    # Phishing Detection
+    # -------------------------
+
+    elif (
+        "suspicious link" in log_text
+        or "credentials submitted" in log_text
+    ):
+
+        attack = "Phishing Attack"
+        confidence = 92
+
+        evidence.append(
+            "Suspicious link interaction detected"
+        )
+
+        evidence.append(
+            "Credential submission detected"
+        )
+
+        if "unknown ip" in log_text:
+            evidence.append(
+                "Login from unknown location detected"
+            )
+
+
+    # -------------------------
+    # Insider Threat Detection
+    # -------------------------
+
+    elif (
+        "usb device" in log_text
+        or "removable drive" in log_text
+    ):
+
+        attack = "Insider Threat"
+        confidence = 94
+
+        evidence.append(
+            "External storage device activity detected"
+        )
+
+        evidence.append(
+            "Sensitive data movement detected"
+        )
+
+
+    else:
+
+        evidence.append(
+            "No known attack pattern detected"
+        )
+
+
+    incident.analyzed = True
+
+
     return {
-        "attack": "Unknown",
-        "confidence": 0,
-        "reason": [
-            "No matching attack pattern found."
-        ]
+        "attack": attack,
+        "confidence": confidence,
+        "reason": evidence
     }
