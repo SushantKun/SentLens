@@ -1,4 +1,4 @@
-from collections import Counter
+import threading
 
 import customtkinter as ctk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -6,6 +6,7 @@ from matplotlib.figure import Figure
 
 from analyzer.analyzer import analyze_incident
 from engine.generator import IncidentGenerator
+from intelligence.threat_intel import lookup_ip_reputation
 from reports.report import get_recommendations
 
 
@@ -55,6 +56,7 @@ class SentLensApp(ctk.CTk):
         self.generator = IncidentGenerator()
         self.current_incident = None
         self.current_result = None
+        self.threat_intel_result = None
 
         self.pages = {}
         self.nav_buttons = {}
@@ -75,31 +77,31 @@ class SentLensApp(ctk.CTk):
         self.show_page("case")
 
     def create_sidebar(self):
-        sidebar = ctk.CTkFrame(
+        self.sidebar = ctk.CTkFrame(
             self,
             width=225,
             corner_radius=0,
             fg_color=COLORS["sidebar"],
         )
-        sidebar.grid(row=0, column=0, sticky="nsew")
-        sidebar.grid_propagate(False)
+        self.sidebar.grid(row=0, column=0, sticky="nsew")
+        self.sidebar.grid_propagate(False)
 
         ctk.CTkLabel(
-            sidebar,
+            self.sidebar,
             text="SENTLENS",
             font=("Segoe UI", 25, "bold"),
             text_color=COLORS["accent"],
         ).pack(anchor="w", padx=22, pady=(28, 0))
 
         ctk.CTkLabel(
-            sidebar,
+            self.sidebar,
             text="Incident investigation workspace",
             font=("Segoe UI", 12),
             text_color=COLORS["muted"],
         ).pack(anchor="w", padx=22, pady=(0, 30))
 
         self.generate_button = ctk.CTkButton(
-            sidebar,
+            self.sidebar,
             text="Generate New Case",
             height=40,
             fg_color="#0284c7",
@@ -110,7 +112,7 @@ class SentLensApp(ctk.CTk):
         self.generate_button.pack(fill="x", padx=18, pady=(0, 8))
 
         self.analyze_button = ctk.CTkButton(
-            sidebar,
+            self.sidebar,
             text="Analyze Current Case",
             height=40,
             fg_color="#334155",
@@ -121,7 +123,7 @@ class SentLensApp(ctk.CTk):
         self.analyze_button.pack(fill="x", padx=18, pady=(0, 28))
 
         ctk.CTkLabel(
-            sidebar,
+            self.sidebar,
             text="WORKSPACE",
             font=("Segoe UI", 10, "bold"),
             text_color=COLORS["muted"],
@@ -132,20 +134,20 @@ class SentLensApp(ctk.CTk):
         self.add_nav_button("analytics", "Analytics")
 
         ctk.CTkFrame(
-            sidebar,
+            self.sidebar,
             height=1,
             fg_color=COLORS["border"],
         ).pack(fill="x", padx=18, pady=22)
 
         ctk.CTkLabel(
-            sidebar,
+            self.sidebar,
             text="CURRENT CASE",
             font=("Segoe UI", 10, "bold"),
             text_color=COLORS["muted"],
         ).pack(anchor="w", padx=22)
 
         self.sidebar_case_label = ctk.CTkLabel(
-            sidebar,
+            self.sidebar,
             text="No case loaded",
             font=("Consolas", 11),
             text_color=COLORS["muted"],
@@ -154,7 +156,7 @@ class SentLensApp(ctk.CTk):
         self.sidebar_case_label.pack(anchor="w", padx=22, pady=(7, 10))
 
         self.sidebar_status = ctk.CTkLabel(
-            sidebar,
+            self.sidebar,
             text="READY",
             font=("Segoe UI", 10, "bold"),
             corner_radius=7,
@@ -164,11 +166,11 @@ class SentLensApp(ctk.CTk):
         )
         self.sidebar_status.pack(anchor="w", padx=22)
 
-        spacer = ctk.CTkFrame(sidebar, fg_color="transparent")
+        spacer = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         spacer.pack(fill="both", expand=True)
 
         self.clear_button = ctk.CTkButton(
-            sidebar,
+            self.sidebar,
             text="Clear Case",
             height=33,
             fg_color="transparent",
@@ -179,7 +181,7 @@ class SentLensApp(ctk.CTk):
         self.clear_button.pack(fill="x", padx=18, pady=(0, 8))
 
         ctk.CTkButton(
-            sidebar,
+            self.sidebar,
             text="Exit SentLens",
             height=33,
             fg_color="transparent",
@@ -192,14 +194,7 @@ class SentLensApp(ctk.CTk):
 
     def add_nav_button(self, page_name, text):
         button = ctk.CTkButton(
-            self,
-            text=text,
-        )
-
-        button.destroy()
-
-        button = ctk.CTkButton(
-            self.winfo_children()[0],
+            self.sidebar,
             text=text,
             anchor="w",
             height=36,
@@ -281,38 +276,23 @@ class SentLensApp(ctk.CTk):
         page.grid_columnconfigure(0, weight=1)
         page.grid_rowconfigure(1, weight=1)
 
-        metrics_frame = ctk.CTkFrame(
-            page,
-            fg_color="transparent",
-        )
+        metrics_frame = ctk.CTkFrame(page, fg_color="transparent")
         metrics_frame.grid(row=0, column=0, sticky="ew", pady=(0, 14))
 
         for column in range(4):
             metrics_frame.grid_columnconfigure(column, weight=1)
 
         self.case_metric = self.create_metric_card(
-            metrics_frame,
-            0,
-            "CASE",
-            "--",
+            metrics_frame, 0, "CASE", "--"
         )
         self.window_metric = self.create_metric_card(
-            metrics_frame,
-            1,
-            "EVENT WINDOW",
-            "--",
+            metrics_frame, 1, "EVENT WINDOW", "--"
         )
         self.event_metric = self.create_metric_card(
-            metrics_frame,
-            2,
-            "EVENTS",
-            "--",
+            metrics_frame, 2, "EVENTS", "--"
         )
         self.risk_metric = self.create_metric_card(
-            metrics_frame,
-            3,
-            "SUSPICIOUS",
-            "--",
+            metrics_frame, 3, "SUSPICIOUS", "--"
         )
 
         timeline_panel = ctk.CTkFrame(
@@ -505,13 +485,11 @@ class SentLensApp(ctk.CTk):
 
         self.current_incident = self.generator.generate()
         self.current_result = None
+        self.threat_intel_result = None
         self.timeline_index = 0
 
-        self.clear_children(self.investigation_scroll)
         self.show_investigation_empty_state()
-        self.clear_children(self.analytics_frame)
         self.show_analytics_empty_state()
-        self.show_timeline_empty_state()
 
         self.case_metric.configure(
             text=f"#{self.current_incident.case_id:04d}"
@@ -824,6 +802,54 @@ class SentLensApp(ctk.CTk):
             indicators["files"],
         )
 
+        self.section_label(self.investigation_scroll, "Threat Intelligence")
+
+        ti_card = ctk.CTkFrame(
+            self.investigation_scroll,
+            fg_color=COLORS["card"],
+            corner_radius=10,
+        )
+        ti_card.pack(fill="x", padx=16)
+
+        ips = indicators["ips"]
+
+        self.ti_target_label = ctk.CTkLabel(
+            ti_card,
+            text=(
+                f"Target indicator: {ips[0]}"
+                if ips
+                else "No IP indicator found in this case."
+            ),
+            font=("Consolas", 11),
+            text_color=COLORS["muted"],
+        )
+        self.ti_target_label.pack(anchor="w", padx=14, pady=(12, 4))
+
+        self.ti_result_label = ctk.CTkLabel(
+            ti_card,
+            text=(
+                "Request a live AbuseIPDB reputation check."
+                if ips
+                else "Threat-intelligence lookup is unavailable for this case."
+            ),
+            font=("Segoe UI", 12),
+            justify="left",
+            wraplength=700,
+        )
+        self.ti_result_label.pack(anchor="w", padx=14, pady=(0, 8))
+
+        self.ti_lookup_button = ctk.CTkButton(
+            ti_card,
+            text="Enrich IP Reputation",
+            width=180,
+            height=32,
+            fg_color="#0369a1",
+            hover_color="#075985",
+            state="normal" if ips else "disabled",
+            command=self.start_ip_enrichment,
+        )
+        self.ti_lookup_button.pack(anchor="w", padx=14, pady=(0, 12))
+
         self.section_label(self.investigation_scroll, "Detection Evidence")
 
         for index, evidence in enumerate(result["evidence"], start=1):
@@ -930,17 +956,100 @@ class SentLensApp(ctk.CTk):
             text_color=COLORS["muted"],
         ).pack(anchor="w", padx=14, pady=(10, 2))
 
-        values_text = "   ".join(values[:6])
-
         ctk.CTkLabel(
             parent,
-            text=values_text,
+            text="   ".join(values[:6]),
             anchor="w",
             justify="left",
             font=("Consolas", 11),
             text_color="#bae6fd",
             wraplength=700,
         ).pack(anchor="w", padx=14, pady=(0, 4))
+
+    def start_ip_enrichment(self):
+        if self.current_result is None:
+            return
+
+        ips = self.current_result["indicators"]["ips"]
+
+        if not ips:
+            self.ti_result_label.configure(
+                text="No IP indicator is available for enrichment."
+            )
+            return
+
+        target_ip = ips[0]
+
+        self.ti_lookup_button.configure(
+            text="Checking AbuseIPDB...",
+            state="disabled",
+        )
+
+        threading.Thread(
+            target=self.lookup_ip_in_background,
+            args=(target_ip,),
+            daemon=True,
+        ).start()
+
+    def lookup_ip_in_background(self, target_ip):
+        result = lookup_ip_reputation(target_ip)
+
+        self.after(
+            0,
+            lambda: self.display_ip_reputation(result),
+        )
+
+    def display_ip_reputation(self, result):
+        if not hasattr(self, "ti_result_label"):
+            return
+
+        try:
+            if not self.ti_result_label.winfo_exists():
+                return
+
+            self.threat_intel_result = result
+
+            if not result["available"]:
+                self.ti_result_label.configure(
+                    text=result["message"],
+                    text_color=COLORS["warning"],
+                )
+                self.ti_lookup_button.configure(
+                    text="Try Again",
+                    state="normal",
+                )
+                return
+
+            score = result["abuse_confidence_score"]
+            reports = result["total_reports"]
+
+            if score >= 75:
+                risk_text = "High-risk reputation"
+                risk_color = COLORS["critical"]
+            elif score >= 25:
+                risk_text = "Elevated reputation risk"
+                risk_color = COLORS["high"]
+            else:
+                risk_text = "No elevated abuse confidence"
+                risk_color = COLORS["success"]
+
+            self.ti_result_label.configure(
+                text=(
+                    f"{risk_text}: {score}% abuse confidence | "
+                    f"{reports} historical reports | "
+                    f"ISP: {result['isp']} | "
+                    f"Country: {result['country_code']}"
+                ),
+                text_color=risk_color,
+            )
+
+            self.ti_lookup_button.configure(
+                text="Recheck Reputation",
+                state="normal",
+            )
+
+        except Exception:
+            return
 
     def render_analytics(self):
         self.clear_children(self.analytics_frame)
@@ -1059,6 +1168,7 @@ class SentLensApp(ctk.CTk):
 
         self.current_incident = None
         self.current_result = None
+        self.threat_intel_result = None
         self.timeline_index = 0
 
         self.case_metric.configure(text="--")
