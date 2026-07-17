@@ -2,74 +2,61 @@ import random
 
 from models import LogEntry
 
-from engine.timeline import Timeline
-from engine.data import (
-    random_ip,
-    COMMON_PORTS,
-)
+from engine.data import COMMON_PORTS, random_ip
 
 
 def generate():
-
-    timeline = Timeline()
-    timeline.reset()
-
     attacker_ip = random_ip()
+    target_ip = f"10.0.{random.randint(1, 20)}.{random.randint(10, 240)}"
+
+    ports = random.sample(
+        COMMON_PORTS,
+        random.randint(6, 10),
+    )
 
     logs = []
 
-    ports = random.sample(COMMON_PORTS, random.randint(6, 10))
-
     for port in ports:
+        action = random.choice(["DENY", "ALLOW"])
 
         logs.append(
-
             LogEntry(
-
-                timestamp=timeline.next_timestamp(),
-
+                timestamp="",
                 source="Firewall",
-
                 level="Information",
-
-                message=f"TCP SYN scan detected from {attacker_ip} on port {port}"
-
+                message=(
+                    f"Firewall {action} | "
+                    f"src={attacker_ip} | "
+                    f"dst={target_ip} | "
+                    f"protocol=TCP | dport={port}"
+                ),
             )
-
         )
 
     logs.append(
-
         LogEntry(
-
-            timestamp=timeline.next_timestamp(),
-
+            timestamp="",
             source="IDS",
-
             level="Warning",
-
-            message=f"Port scan threshold exceeded for {attacker_ip}"
-
+            message=(
+                "Network connection-rate threshold exceeded | "
+                f"Source={attacker_ip} | "
+                f"Target={target_ip}"
+            ),
         )
-
     )
 
     if random.random() < 0.8:
-
         logs.append(
-
             LogEntry(
-
-                timestamp=timeline.next_timestamp(),
-
+                timestamp="",
                 source="Firewall",
-
                 level="Critical",
-
-                message=f"Source IP {attacker_ip} automatically blocked"
-
+                message=(
+                    "Automated firewall rule applied | "
+                    f"Connection blocked for source {attacker_ip}"
+                ),
             )
-
         )
 
     return logs

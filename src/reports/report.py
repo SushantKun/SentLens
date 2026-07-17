@@ -2,34 +2,44 @@ def get_recommendations(attack_type):
     recommendations = {
         "Brute Force Attack": [
             "Reset credentials for the affected account.",
-            "Block the suspicious source IP address.",
-            "Enable multi-factor authentication.",
-            "Review newly created administrator accounts.",
+            "Revoke active sessions and review recent sign-in activity.",
+            "Block or restrict the suspicious source IP address.",
+            "Enable multi-factor authentication for the affected account.",
+            "Review newly created privileged accounts and access changes.",
         ],
         "Port Scan": [
             "Block or monitor the scanning source IP address.",
-            "Review exposed services and unnecessary open ports.",
-            "Check firewall and IDS logs for follow-up activity.",
-            "Confirm critical services are patched.",
+            "Review exposed services and close unnecessary open ports.",
+            "Confirm exposed services are patched and securely configured.",
+            "Review IDS and firewall logs for follow-up access attempts.",
+            "Apply rate-limiting or detection rules for repeated probes.",
         ],
         "Phishing Attack": [
-            "Isolate the affected endpoint if suspicious activity continues.",
-            "Reset the affected user's credentials.",
-            "Block the sender domain and related indicators.",
-            "Review email gateway logs for similar messages.",
+            "Quarantine matching emails across affected mailboxes.",
+            "Reset affected credentials and revoke active sessions.",
+            "Block the sender domain, malicious URL, and attachment hash.",
+            "Search endpoints for related files or execution activity.",
+            "Review email gateway logs for additional recipients.",
         ],
         "Insider Threat": [
-            "Review the user's file-access history.",
-            "Investigate external storage and data-transfer activity.",
-            "Preserve relevant logs and evidence.",
+            "Preserve relevant logs, file-access records, and evidence.",
+            "Temporarily restrict access using least-privilege controls.",
+            "Review external-storage and data-transfer activity.",
+            "Investigate the user's recent file-access history.",
             "Coordinate with security and HR before restoring access.",
         ],
     }
 
-    return recommendations.get(
+    actions = recommendations.get(
         attack_type,
-        ["Review the incident evidence and continue investigation."]
+        ["Review the available evidence and continue investigation."]
     )
+
+    actions.append(
+        "Document the incident, assign an owner, and monitor for recurrence."
+    )
+
+    return actions
 
 
 def format_incident_report(incident, result):
@@ -62,8 +72,11 @@ def format_incident_report(incident, result):
         "-" * 70,
     ])
 
-    for recommendation in get_recommendations(result["attack"]):
-        lines.append(f"- {recommendation}")
+    for index, recommendation in enumerate(
+        get_recommendations(result["attack"]),
+        start=1,
+    ):
+        lines.append(f"{index}. {recommendation}")
 
     lines.append("=" * 70)
 

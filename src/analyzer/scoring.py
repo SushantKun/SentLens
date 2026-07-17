@@ -1,85 +1,61 @@
 def calculate_confidence(evidence, attack_type):
-
     score = 0
 
-
     for item in evidence:
-
         text = item.lower()
 
-
-        # Authentication attacks
         if "failed login" in text:
             score += 30
 
         if "successful login" in text:
             score += 20
 
-        if "admin" in text:
+        if "administrative account" in text:
+            score += 25
+
+        if "port scanning" in text:
+            score += 35
+
+        if "connection-rate threshold" in text:
             score += 20
 
+        if "firewall blocked" in text:
+            score += 25
 
-        # Network attacks
-        if "port scanning" in text:
-            score += 40
+        if "email attachment" in text:
+            score += 20
 
-        if "blocked" in text:
+        if "untrusted url" in text:
+            score += 20
+
+        if "macro" in text or "command execution" in text:
             score += 30
 
-
-        # Phishing
-        if "attachment" in text:
+        if "credential submission" in text:
             score += 30
 
-        if "macro" in text:
-            score += 30
+        if "payload execution" in text:
+            score += 20
 
-        if "payload" in text:
-            score += 30
-
-
-        # Insider threat
-        if "file access" in text:
-            score += 30
+        if "unusual file access" in text:
+            score += 25
 
         if "data exfiltration" in text:
-            score += 40
+            score += 35
 
         if "suspended" in text:
             score += 20
 
+    if attack_type == "Brute Force Attack" and len(evidence) >= 2:
+        score += 10
 
+    elif attack_type == "Port Scan" and len(evidence) >= 2:
+        score += 10
 
-    # Attack-specific minimum confidence boosts
+    elif attack_type == "Phishing Attack" and len(evidence) >= 2:
+        score += 10
 
-    if attack_type == "Port Scan":
+    elif attack_type == "Insider Threat" and len(evidence) >= 2:
+        score += 10
 
-        if len(evidence) >= 2:
-            score += 20
-
-
-    elif attack_type == "Brute Force Attack":
-
-        if len(evidence) >= 2:
-            score += 15
-
-
-    elif attack_type == "Phishing Attack":
-
-        if len(evidence) >= 2:
-            score += 15
-
-
-    elif attack_type == "Insider Threat":
-
-        if len(evidence) >= 2:
-            score += 15
-
-
-
-    if score > 100:
-
-        score = 100
-
-
-    return score
+    return min(score, 100)
