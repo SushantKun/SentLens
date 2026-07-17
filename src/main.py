@@ -1,36 +1,14 @@
-from analyzer.analyzer import analyze_incident
-from engine.generator import IncidentGenerator
-from reports.report import format_incident_report
+import customtkinter as ctk
+
+from ui.ui import SentLensApp
 
 
 def main():
-    generator = IncidentGenerator()
-    incident = generator.generate()
+    ctk.set_appearance_mode("dark")
+    ctk.set_default_color_theme("blue")
 
-    print("=" * 70)
-    print("GENERATED INCIDENT")
-    print("=" * 70)
-    print(f"Attack: {incident.attack_type}")
-    print(f"Severity: {incident.severity}")
-    print(f"Source: {incident.source}")
-    print()
-
-    print("LOGS")
-    print("-" * 70)
-
-    for log in incident.logs:
-        print(
-            f"[{log.timestamp}] "
-            f"[{log.level}] "
-            f"[{log.source}] "
-            f"{log.message}"
-        )
-
-    result = analyze_incident(incident)
-    report = format_incident_report(incident, result)
-
-    print("\n")
-    print(report)
+    app = SentLensApp()
+    app.mainloop()
 
 
 if __name__ == "__main__":
