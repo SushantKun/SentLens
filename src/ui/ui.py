@@ -9,6 +9,7 @@ from engine.generator import IncidentGenerator
 from intelligence.threat_intel import lookup_ip_reputation
 from reports.report import get_recommendations
 
+from response.playbook import execute_playbook
 
 COLORS = {
     "background": "#0b0f14",
@@ -726,12 +727,45 @@ class SentLensApp(ctk.CTk):
             pady=5,
         ).grid(row=0, column=1, sticky="e", padx=18, pady=(15, 0))
 
-        ctk.CTkLabel(
+        confidence_panel = ctk.CTkFrame(
             summary,
-            text=f"{result['confidence']}% confidence",
+            fg_color="transparent",
+        )
+        confidence_panel.grid(
+            row=1,
+            column=1,
+            sticky="e",
+            padx=18,
+            pady=(0, 15),
+        )
+
+        self.confidence_value_label = ctk.CTkLabel(
+            confidence_panel,
+            text="0% confidence",
             font=("Segoe UI", 13, "bold"),
             text_color=COLORS["accent"],
-        ).grid(row=1, column=1, sticky="e", padx=18, pady=(0, 15))
+        )
+        self.confidence_value_label.pack(anchor="e")
+
+        self.confidence_progress = ctk.CTkProgressBar(
+            confidence_panel,
+            width=180,
+            height=10,
+            progress_color=COLORS["accent"],
+        )
+        self.confidence_progress.pack(anchor="e", pady=(5, 0))
+        self.confidence_progress.set(0)
+
+        confidence_token = self.animation_token
+
+        self.after(
+            150,
+            lambda: self.animate_confidence(
+                0,
+                result["confidence"],
+                confidence_token,
+            ),
+        )
 
         metrics_row = ctk.CTkFrame(
             self.investigation_scroll,
@@ -918,6 +952,41 @@ class SentLensApp(ctk.CTk):
                 padx=13,
                 pady=8,
             ).pack(fill="x", padx=16, pady=3)
+        
+        self.section_label(
+            self.investigation_scroll,
+            "Containment Playbook",
+        )
+
+        self.playbook_status = ctk.CTkLabel(
+            self.investigation_scroll,
+            text=(
+                "Simulation only. No real accounts, systems, "
+                "or network rules will be changed."
+            ),
+            font=("Segoe UI", 12),
+            text_color=COLORS["muted"],
+            justify="left",
+        )
+        self.playbook_status.pack(
+            anchor="w",
+            padx=16,
+            pady=(0, 8),
+        )
+
+        self.playbook_button = ctk.CTkButton(
+            self.investigation_scroll,
+            text="Execute Simulated Playbook",
+            height=34,
+            fg_color="#7c3aed",
+            hover_color="#6d28d9",
+            command=self.start_playbook,
+        )
+        self.playbook_button.pack(
+            anchor="w",
+            padx=16,
+            pady=(0, 20),
+        )
 
     def add_small_metric(self, parent, column, title, value):
         card = ctk.CTkFrame(
@@ -1050,6 +1119,39 @@ class SentLensApp(ctk.CTk):
 
         except Exception:
             return
+    def start_playbook(self):
+        if self.current_result is None:
+            return
+
+        self.playbook_button.configure(
+            text="Executing simulation...",
+            state="disabled",
+        )
+        self.playbook_status.configure(
+            text="Simulating containment actions...",
+            text_color=COLORS["warning"],
+        )
+
+        self.after(650, self.complete_playbook)
+
+    def complete_playbook(self):
+        playbook = execute_playbook(self.current_result)
+
+        actions = "\n".join(
+            f"Completed: {action}"
+            for action in playbook["actions"]
+        )
+        self.playbook_status.configure(
+            text=(
+                f"{playbook['mode']}\n\n"
+                f"{actions}"
+            ),
+            text_color=COLORS["success"],
+        )
+        self.playbook_button.configure(
+            text="Playbook Complete",
+            state="disabled",
+        )
 
     def render_analytics(self):
         self.clear_children(self.analytics_frame)
@@ -1162,6 +1264,40 @@ class SentLensApp(ctk.CTk):
             padx=12,
             pady=(0, 12),
         )
+    def animate_confidence(self, current, target, token):
+        if token != self.animation_token:
+            return
+
+        try:
+            if not self.confidence_progress.winfo_exists():
+                return
+
+            if current >= target:
+                self.confidence_progress.set(target / 100)
+                self.confidence_value_label.configure(
+                    text=f"{target}% confidence"
+                )
+                return
+
+            step = max(1, (target - current) // 18)
+            current = min(target, current + step)
+
+            self.confidence_progress.set(current / 100)
+            self.confidence_value_label.configure(
+                text=f"{current}% confidence"
+            )
+
+            self.after(
+                30,
+                lambda: self.animate_confidence(
+                    current,
+                    target,
+                    token,
+                ),
+            )
+
+        except Exception:
+            return
 
     def clear_case(self):
         self.animation_token += 1
