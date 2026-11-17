@@ -1,7 +1,7 @@
 import customtkinter as ctk
 
-from generator import generate_random_scenario
-from analyzer import analyze_logs
+from engine.generator import generate_random_scenario
+from analyzer.analyzer import analyze_logs
 
 
 class SentLensApp(ctk.CTk):
