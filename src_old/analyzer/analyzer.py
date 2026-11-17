@@ -1,4 +1,4 @@
-from models import Incident
+from models.incident import Incident
 
 
 def analyze_logs(incident: Incident):

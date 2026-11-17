@@ -28,7 +28,7 @@ def lookup_ip_reputation(ip_address):
     Checks one public IP address against AbuseIPDB.
 
     The API key is read from the ABUSEIPDB_API_KEY environment variable.
-    No API keys should be written inside source code.
+  
     """
 
     api_key = os.getenv("ABUSEIPDB_API_KEY")

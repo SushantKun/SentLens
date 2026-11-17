@@ -2,7 +2,7 @@ import random
 
 from models.incident import Incident
 
-from engine.templates import (
+from engine.attack_factory import (
     generate_brute_force_logs,
     generate_port_scan_logs,
     generate_phishing_logs,
